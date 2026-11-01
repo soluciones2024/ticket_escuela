@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soporte Escolar TI - Control de Salas</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #283593; --success: #16a085; --light: #f5f7fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        .menu-items { display: flex; gap: 12px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 16px; font-weight: 600; padding: 10px 14px; border-radius: 6px; text-decoration: none; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: var(--secondary); border: 1px solid rgba(255,255,255,0.2); }
+        
+        .container { max-width: 1350px; margin: 30px auto; padding: 0 25px; display: flex; gap: 25px; }
+        .left-panel { width: 340px; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); height: fit-content; border: 1px solid #e2e8f0; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 25px; }
+        
+        h3 { margin-top: 0; color: var(--primary); font-size: 18px; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-weight: 700; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #4a5568; }
+        input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        button { width: 100%; padding: 11px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; border: none; }
+        button.btn-primary { background: var(--primary); color: white; }
+        button.btn-primary:hover { background: var(--secondary); }
+        button.btn-danger { background: #e74c3c; color: white; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        tr.sala-row { cursor: pointer; }
+        tr.sala-row:hover { background: #f1f5f9; }
+        tr.selected { background-color: #e3f2fd !important; }
+        .table-container { max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <!-- PESTAÑA EXCLUSIVA DE MANTENIMIENTO DEL SISTEMA -->
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+
+    </nav>
+    <div class="container">
+        <!-- Formulario Lateral de Control de Salas -->
+        <form class="left-panel" id="formSalas" action="/mantenedor_salas" method="POST">
+            <input type="hidden" name="accion" id="inputAccion" value="crear">
+            <h3>Ficha de Sala / Dependencia</h3>
+            
+            <div class="form-group">
+                <label>Nombre Identificador de la Sala:</label>
+                <input type="text" name="nombre_sala" id="txtNombreSala" required placeholder="Ej: Laboratorio 2, Sala de Audio" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Pabellón / Bloque Edificio:</label>
+                <input type="text" name="pabellon" id="txtPabellon" required placeholder="Ej: Pabellón B, Ala Norte">
+            </div>
+            <div class="form-group">
+                <label>Capacidad Máxima de Alumnos:</label>
+                <input type="number" name="capacidad" id="txtCapacidad" required placeholder="Ej: 40" min="1">
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn-primary" onclick="setAccion('crear')">➕ Registrar Dependencia</button>
+                <button type="submit" class="btn-primary" style="background:#34495e;" onclick="setAccion('modificar')">📝 Modificar Atributos</button>
+                <button type="submit" class="btn-danger" onclick="setAccion('eliminar')">❌ Eliminar del Pabellón</button>
+            </div>
+        </form>
+
+        <div class="right-panel">
+            <!-- Bloque superior: Listado del salas del colegio -->
+            <div>
+                <h3 style="border-bottom: 2px solid #1a237e; padding-bottom: 5px;">🏢 Catálogo de Espacios y Dependencias Habilitadas</h3>
+                <div class="table-container">
+                    <table id="tablaSalas">
+                        <thead>
+                            <tr>
+                                <th>Nombre Dependencia</th>
+                                <th>Ubicación / Pabellón</th>
+                                <th>Aforo Máximo Estudiantes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in salas %}
+                            <!-- s[0] es nombre_sala, s[1] es pabellon, s[2] es capacidad_alumnos -->
+                            <tr class="sala-row" onclick="cargarSala(this, '{{ s[0] }}', '{{ s[1] }}', '{{ s[2] }}')">
+                                <td><strong>{{ s[0] }}</strong></td>
+                                <td>{{ s[1] }}</td>
+                                <td style="font-weight: bold; color: #1a237e;">{{ s[2] }} Alumnos</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #7f8c8d; padding: 15px;">No hay salas catalogadas actualmente.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+
+
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bloque inferior: Bitácora de Auditoría de Salas -->
+            <div>
+                <h3 style="border-bottom: 2px solid #16a085; padding-bottom: 5px;">📜 Historial de Modificaciones de Infraestructura</h3>
+                <div class="table-container" style="max-height: 200px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID Transacción</th>
+                                <th>Dependencia Afectada</th>
+                                <th>Acción Registrada</th>
+                                <th>Fecha de Evento</th>
+                                <th>Operario Operaciones</th>
+                            </tr>
+                        </thead>
+                         <tbody>
+                            {% for h in historial %}
+                            <!-- h[0]=id, h[1]=nombre_sala, h[2]=accion, h[3]=fecha_accion, h[4]=operario -->
+                            <tr>
+                                <td>#{{ h[0] }}</td>
+                                <td><strong>{{ h[1] }}</strong></td>
+                                <td><span class="badge-accion accion-{{ h[2] }}">{{ h[2] }}</span></td>
+                                <td style="font-size: 11px; color: #555;">{{ h[3] }}</td>
+                                <td style="font-weight: 500;">{{ h[4] }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 15px;">No se registran bitácoras de movimiento locativo en el colegio.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+
+
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setAccion(val) { document.getElementById('inputAccion').value = val; }
+        
+        function cargarSala(row, nombre, pabellon, capacidad) {
+            document.querySelectorAll('.sala-row').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            
+            document.getElementById('txtNombreSala').value = nombre;
+            document.getElementById('txtPabellon').value = pabellon;
+            document.getElementById('txtCapacidad').value = capacidad;
+        }
+    </script>
+</body>
+</html>

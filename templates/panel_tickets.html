@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soporte Escolar TI - Reportar Falla</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #16a085; --danger: #c0392b; --warning: #f39c12; --success: #27ae60; --light: #f5f7fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        
+        /* BARRA SUPERIOR REPARADA CON LOS 6 ENLACES GRANDES VISIBLES */
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        
+        .menu-items { display: flex; gap: 12px; margin-left: 30px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 16px; font-weight: 600; padding: 10px 20px; border-radius: 6px; transition: all 0.3s ease; display: inline-block; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: var(--secondary); border: 1px solid rgba(255,255,255,0.2); }
+        
+        nav .user-info { font-size: 15px; }
+        .container { max-width: 1350px; margin: 25px auto; padding: 0 25px; }
+        
+        .workspace { display: flex; gap: 25px; }
+        .left-panel { width: 350px; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); height: fit-content; border: 1px solid #e2e8f0; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        
+        h3 { margin-top: 0; color: var(--primary); font-size: 18px; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-weight: 700; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #4a5568; }
+        select, textarea, input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; }
+        textarea { height: 100px; resize: none; }
+        
+        button.btn-submit { width: 100%; padding: 12px; background: var(--primary); border: none; color: white; font-weight: bold; font-size: 14px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .badge-sala { background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 14px; display: block; text-align: center; border: 1px solid #bae6fd; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        tr.critica { background-color: #fdf2f2; border-left: 4px solid var(--danger); }
+        tr.alta { background-color: #fffaf0; border-left: 4px solid var(--warning); }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; text-transform: uppercase; }
+        .badge.abierto { background: var(--danger); }
+        .badge.revision { background: var(--warning); color: #333; }
+        .badge.reparado { background: var(--success); }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <!-- PESTAÑA EXCLUSIVA DE MANTENIMIENTO DEL SISTEMA -->
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+
+        <div class="user-info">Hola, <strong>{{ session.get('nombre') }}</strong> | <a href="/logout" style="color:#ff7675; text-decoration:none; font-weight:bold;">Salir</a></div>
+    </nav>
+
+    <div class="container">
+        <div class="workspace">
+            <!-- Formulario Lateral de Ingreso Escolar -->
+            <form class="left-panel" action="/dashboard" method="POST">
+                <h3>Ingresar Falla de Dependencia</h3>
+                <div class="form-group">
+                    <label>Su Sala / Dependencia Asignada:</label>
+                    <span class="badge-sala">🏢 {{ session.get('sala_asignada', 'Cargando...') }}</span>
+                </div>
+                <div class="form-group">
+                    <label>Seleccione Equipamiento con Falla:</label>
+
+				<select name="equipo_inventario" required>
+					{% for eq in catalogo %}
+				<!-- eq[0] es el nombre del equipo, eq[1] es el código de barra único -->
+						<option value="{{ eq[0] }}|{{ eq[1] }}">🛠️ {{ eq[0] }} [Código: {{ eq[1] }}]</option>
+					{% else %}
+				<!-- Mensaje de resguardo si la sala está vacía de inventario -->
+						<option disabled selected value="">⚠️ Esta sala no registra equipos asignados en el inventario</option>
+					{% endfor %}
+				</select>
+
+
+                </div>
+                <div class="form-group">
+                    <label>Nivel de Criticidad:</label>
+                    <select name="prioridad">
+                        <option value="Baja">Baja</option>
+                        <option value="Media" selected>Media</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Crítica">🚨 Crítica / Detiene Clase</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Detalle Técnico del Problema:</label>
+                    <textarea name="descripcion" placeholder="Describa el problema aquí..." required></textarea>
+                </div>
+                <button type="submit" class="btn-submit">🚀 Emitir Ticket de Sala</button>
+            </form>
+
+            <!-- Tabla de Visualización de Requerimientos -->
+            <div class="right-panel">
+                <h3>Bandeja de Requerimientos - Historial de su Dependencia</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">Folio</th>
+                            <th>Solicitante</th>
+                            <th>Ubicación</th>
+                            <th>Dispositivo Falla</th>
+                            <th>Nº Inventario</th>
+                            <th>Criticidad</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tickets %}
+                        <tr class="{% if t[8]=='Crítica' %}critica{% elif t[8]=='Alta' %}alta{% endif %}">
+                            <td><strong>#{{ t[0] }}</strong></td>
+                            <td>{{ t[1] }}</td>
+                            <td>{{ t[2] }}</td>
+                            <td>{{ t[3] }}</td>
+                            <td style="font-family:monospace;">{{ t[4] }}</td>
+                            <td><strong>{{ t[8] }}</strong></td>
+                            <td><span class="badge {% if t[6]=='Abierto' %}abierto{% elif t[6]=='En Revisión' %}revision{% else %}reparado{% endif %}">{{ t[6] }}</span></td>
+                            <td style="font-size:11px; color:#666;">{{ t[7][:16] }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #7f8c8d; padding: 30px;">No se registran incidentes activos actualmente.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

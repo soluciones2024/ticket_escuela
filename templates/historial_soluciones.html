@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soporte Escolar TI - Historial de Soluciones</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #283593; --success: #16a085; --danger: #c0392b; --warning: #f39c12; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        .menu-items { display: flex; gap: 12px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 15px; font-weight: 600; padding: 10px 14px; border-radius: 6px; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: var(--secondary); border: 1px solid rgba(255,255,255,0.2); }
+        
+        .container { max-width: 1450px; margin: 30px auto; padding: 0 25px; display: flex; gap: 25px; }
+        .left-panel { width: 320px; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); height: fit-content; border: 1px solid #e2e8f0; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        
+        h3 { margin-top: 0; color: var(--primary); font-size: 18px; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-weight: 700; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #4a5568; }
+        select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: #fff; }
+        button { width: 100%; padding: 11px; font-size: 14px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; margin-top: 5px; color: white; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+        .badge.abierto { background: #fee2e2; color: #991b1b; }
+        .badge.revisión { background: #fef3c7; color: #92400e; }
+        .badge.reparado { background: #d1fae5; color: #065f46; }
+        .badge.de_baja { background: #f1f5f9; color: #475569; }
+        
+        .firma-section { display: none; margin-top: 60px; justify-content: space-around; text-align: center; }
+        .linea-firma { width: 220px; border-top: 1px solid #333; margin-bottom: 5px; padding-top: 5px; }
+
+        /* FORMATO DE IMPRESIÓN LIMPIO CORREGIDO */
+        @media print {
+            nav, .left-panel, h3, label, select, button { display: none !important; }
+            body { background: white; padding: 0; }
+            .container, .right-panel { box-shadow: none; padding: 0; border: none; width: 100%; margin: 0; }
+            th { background: #f8fafc !important; color: #111 !important; border-bottom: 2px solid #111 !important; }
+            td { padding: 10px 5px; border-bottom: 1px solid #ccc; }
+            .firma-section { display: flex !important; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <!-- PESTAÑA EXCLUSIVA DE MANTENIMIENTO DEL SISTEMA -->
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+
+    </nav>
+    <div class="container">
+        <!-- Panel de Filtros Tridimensionales -->
+        <form class="left-panel" action="/historial_soluciones" method="GET">
+            <h3>Filtros de Auditoría</h3>
+            
+            <div class="form-group">
+                <label>Filtrar por Sala:</label>
+                <select name="filtro_sala">
+                    {% for sala in salas %}
+                        <option value="{{ sala }}" {% if sel_sala == sala %}selected{% endif %}>{{ sala }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Filtrar por Usuario Docente:</label>
+                <select name="filtro_usuario">
+                    {% for user in usuarios %}
+                        <option value="{{ user }}" {% if sel_user == user %}selected{% endif %}>{{ user }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Filtrar por Estado Ticket:</label>
+                <select name="filtro_estado">
+                    {% for estado in estados %}
+                        <option value="{{ estado }}" {% if sel_state == estado or sel_estado == estado %}selected{% endif %}>{{ estado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" style="background: var(--primary);">🔍 Aplicar Filtros Cruzados</button>
+            <button type="button" style="background: var(--success);" onclick="window.print()">📥 Imprimir Reporte Soluciones</button>
+        </form>
+		        <!-- Panel Principal del Historial de Soluciones y Requerimientos -->
+        <div class="right-panel">
+            <div style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                <h2 style="margin:0; color:var(--primary); font-size:22px;">📋 Registro Histórico de Requerimientos y Soluciones Técnicas</h2>
+                <span style="font-size:12px; color:#64748b;">Filtros Aplicados -> Sala: <strong>{{ sel_sala }}</strong> | Funcionario: <strong>{{ sel_user }}</strong> | Estado: <strong>{{ sel_estado }}</strong></span>
+            </div>
+
+            <div class="table-container" style="max-height: 550px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px; text-align:center;">Folio</th>
+                            <th>Ubicación / Sala</th>
+                            <th>Dispositivo</th>
+                            <th>Nº Inventario</th>
+                            <th>Criticidad</th>
+                            <th>Estado</th>
+                            <th>Fecha Reporte</th>
+                            <th>Fecha Solución</th>
+                            <th>Tipo Solución</th>
+                            <th>Comentario de Resolución Técnica</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tickets %}
+                        <tr>
+                            <td style="text-align:center;"><strong>#{{ t[0] }}</strong></td>
+                            <td>{{ t[2] }}</td>
+                            <td>{{ t[3] }}</td>
+                            <td style="font-family:monospace; font-weight:600;">{{ t[4] if t[4] else 'N/A' }}</td>
+                            <td><span class="badge" style="background:#475569;">{{ t[8] }}</span></td>
+                            <td>
+                                <span class="badge {% if t[6]=='Abierto' %}abierto{% elif t[6]=='En Revisión' %}revisión{% elif t[6]=='Reparado' %}reparado{% else %}de_baja{% endif %}">
+                                    {{ t[6] }}
+                                </span>
+                            </td>
+                            <td style="font-size:11px; color:#555;">{{ t[7][:16] if t[7] else 'N/A' }}</td>
+                            <td style="font-size:11px; color:var(--success); font-weight:600;">{{ t[9][:16] if t[9] else 'Pendiente' }}</td>
+                            <td style="font-weight:500;">{{ t[10] if t[10] else 'Sin Solución' }}</td>
+                            <td style="color:#475569; font-style:italic;">{{ t[11] if t[11] else 'Aún no se registran comentarios de cierre.' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="10" style="text-align: center; color: #64748b; padding: 30px; font-weight: 500;">
+                                💡 No se encontraron tickets ni soluciones que coincidan con los criterios de búsqueda seleccionados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bloque de Firmas Corporativas (Visible al Imprimir o Exportar PDF) -->
+            <div class="firma-section">
+                <div>
+                    <div class="linea-firma"></div>
+                    <strong>Encargado de Soporte TI</strong><br>
+                    <span>Firma y Timbre Técnico</span>
+                </div>
+                <div>
+                    <div class="linea-firma"></div>
+                    <strong>Dirección / Inspectoría General</strong><br>
+                    <span>Validación y Conformidad Institucional</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

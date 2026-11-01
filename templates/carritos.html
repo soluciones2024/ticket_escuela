@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mesa de Control TI - Préstamo de Carritos</title>
+    <style>
+        :root { --primary: #2c3e50; --secondary: #2980b9; --light: #f5f7fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f7; margin: 0; padding: 0; }
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
+        .menu-items a { color: #ebd5fb; text-decoration: none; font-size: 16px; font-weight: 600; padding: 10px 20px; border-radius: 6px; }
+        .menu-items a.active { color: white; background: #16a085; }
+        .container { max-width: 1350px; margin: 25px auto; padding: 0 25px; display: flex; gap: 25px; }
+        .left-panel { width: 340px; background: white; border-radius: 8px; padding: 25px; border: 1px solid #e2e8f0; height: fit-content; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; border: 1px solid #e2e8f0; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        select, input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        button { width: 100%; padding: 12px; background: var(--primary); border: none; color: white; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <!-- PESTAÑA EXCLUSIVA DE MANTENIMIENTO DEL SISTEMA -->
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+
+
+    </nav>
+    <div class="container">
+        <form class="left-panel" action="/carritos" method="POST">
+            <input type="hidden" name="accion_tipo" value="reservar">
+            <h3>Reservar Carrito Tecnológico</h3>
+            <label>Seleccionar Carrito:</label>
+            <select name="carrito">
+                <option value="Carrito Tablets Moviles Nº 1">📱 Carrito Tablets Moviles Nº 1</option>
+                <option value="Carrito Notebooks Mineduc Nº 2">💻 Carrito Notebooks Mineduc Nº 2</option>
+            </select>
+            <label>Sala de Destino:</label>
+            <select name="sala">
+                <option value="Sala 1">Sala 1</option><option value="Sala 2">Sala 2</option><option value="Biblioteca">Biblioteca</option>
+            </select>
+            <label>Bloque Horario:</label>
+            <select name="bloque">
+                <option value="Bloque 1 (08:00 - 09:30)">Bloque 1 (08:00 - 09:30)</option>
+                <option value="Bloque 2 (09:45 - 11:15)">Bloque 2 (09:45 - 11:15)</option>
+                <option value="Bloque 3 (11:30 - 13:00)">Bloque 3 (11:30 - 13:00)</option>
+            </select>
+            <label>Fecha de Uso:</label>
+            <input type="date" name="fecha" required>
+            <button type="submit">📅 Confirmar Reserva</button>
+        </form>
+
+        <div class="right-panel">
+            <h3>Bitácora de Préstamos y Control de Devolución</h3>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Dispositivo</th><th>Docente</th><th>Destino</th><th>Horario</th><th>Fecha</th><th>Estado</th><th>Acción Técnico</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in prestamos %}
+                    <tr>
+                        <td>#{{ p[0] }}</td>
+                        <td><strong>{{ p[1] }}</strong></td>
+                        <td>{{ p[2] }}</td>
+                        <td>{{ p[3] }}</td>
+                        <td>{{ p[4] }}</td>
+                        <td>{{ p[5] }}</td>
+                        <td><span style="font-weight: bold; color: #2980b9;">{{ p[6] }}</span></td>
+                        <td>
+                            <form action="/carritos" method="POST" style="display: inline-flex; gap: 4px;">
+                                <input type="hidden" name="accion_tipo" value="actualizar">
+                                <input type="hidden" name="prestamo_id" value="{{ p[0] }}">
+                                <select name="nuevo_estado" style="padding: 2px; margin: 0; width: 110px; font-size: 11px;">
+                                    <option value="Entregado">Entregado</option>
+                                    <option value="Devuelto OK">Devuelto OK</option>
+                                    <option value="Devuelto Dañado">Devuelto Dañado</option>
+                                </select>
+                                <button type="submit" style="padding: 2px 6px; font-size: 11px; width: auto;">Go</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

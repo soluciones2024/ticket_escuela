@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soporte Escolar TI - Gestión de Cuentas Docentes</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #283593; --success: #16a085; --light: #f5f7fa; --danger: #c0392b; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        .menu-items { display: flex; gap: 12px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 15px; font-weight: 600; padding: 10px 14px; border-radius: 6px; text-decoration: none; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: var(--secondary); border: 1px solid rgba(255,255,255,0.2); }
+        
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 25px; display: flex; gap: 25px; }
+        .left-panel { width: 360px; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); height: fit-content; border: 1px solid #e2e8f0; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        
+        h3 { margin-top: 0; color: var(--primary); font-size: 18px; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-weight: 700; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #4a5568; }
+        input, select { width: 100%; box-sizing: border-box; padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #333; }
+        
+        .permisos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; margin-top: 5px; }
+        .permisos-grid label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: normal; cursor: pointer; color: #333; }
+        .permisos-grid input { width: auto; cursor: pointer; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+        button { width: 100%; padding: 11px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; border: none; }
+        button.btn-success { background: var(--success); color: white; }
+        button.btn-primary { background: var(--primary); color: white; }
+        button.btn-danger { background: var(--danger); color: white; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        tr.user-row { cursor: pointer; }
+        tr.user-row:hover { background: #f1f5f9; }
+        tr.selected { background-color: #e3f2fd !important; }
+        .badge-rol { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .rol-Profesor { background: #e0f2fe; color: #0369a1; }
+        .rol-Informático { background: #d1fae5; color: #065f46; }
+        .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .hint-text { font-size: 11px; color: #16a085; font-weight: 500; margin-top: 2px; display: block; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios" class="active">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Formulario Lateral de Control de Usuarios -->
+        <form class="left-panel" id="formUsuarios" action="/mantenedor_usuarios" method="POST">
+            <input type="hidden" name="accion" id="inputAccion" value="crear">
+            <h3>Registro de Funcionarios</h3>
+            
+            <div class="form-group">
+                <label>Nombre Completo del Docente:</label>
+                <input type="text" name="nombre_completo" id="txtNombreCompleto" required placeholder="Ej: Paola Morales" oninput="generarNombreUsuarioAutomatico()" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label>Nombre de Usuario (Cuenta):</label>
+                <input type="text" name="username" id="txtUsername" required placeholder="Ej: pmorales" autocomplete="off">
+                <span class="hint-text" id="lblHint">💡 Autogenerado: primera letra + apellido</span>
+            </div>
+            <div class="form-group">
+                <label>Contraseña de Acceso:</label>
+                <input type="password" name="password" id="txtPassword" required placeholder="Ingrese clave o token seguro">
+            </div>
+
+            <div class="form-group">
+                <label>Rol Institucional:</label>
+                <select name="rol" id="cbRol" required>
+                    <option value="Profesor">👨‍🏫 Profesor / Encargado de Sala</option>
+                    <option value="Informático">🔧 Informático / Soporte Técnico</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Sala Fija / Dependencia Asignada:</label>
+                <select name="sala_asignada" id="cbSalaAsignada" required>
+                    {% for sala in salas_select %}
+                        <option value="{{ sala }}">{{ sala }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Módulos Habilitados (Permisos):</label>
+                <div class="permisos-grid">
+                    <label><input type="checkbox" name="permisos" value="Tickets" class="chk-permiso" checked> Tickets</label>
+                    <label><input type="checkbox" name="permisos" value="Bitacora" class="chk-permiso"> Bitácora</label>
+                    <label><input type="checkbox" name="permisos" value="Carritos" class="chk-permiso"> Carritos</label>
+                    <label><input type="checkbox" name="permisos" value="Usuarios" class="chk-permiso"> Cuentas</label>
+                    <label><input type="checkbox" name="permisos" value="Inventario" class="chk-permiso"> Inventario</label>
+                    <label><input type="checkbox" name="permisos" value="Salas" class="chk-permiso"> Salas</label>
+                    <label><input type="checkbox" name="permisos" value="Actas" class="chk-permiso"> Actas</label>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" style="background:#7f8c8d; color:white; margin-bottom: 2px;" onclick="limpiarFormulario()">🧹 Limpiar / Nuevo</button>
+                <button type="submit" class="btn-success" onclick="setAccion('crear')">➕ Crear Cuenta</button>
+                <button type="submit" class="btn-primary" onclick="setAccion('modificar')">✏️ Modificar Parámetros</button>
+                <button type="submit" class="btn-danger" onclick="setAccion('eliminar')">❌ Eliminar Usuario</button>
+            </div>
+        </form>
+        <!-- Panel Derecho: Listado Completo de Cuentas Existentes -->
+        <div class="right-panel">
+            <h3>👥 Listado General de Cuentas y Accesos TI</h3>
+            <p style="font-size: 12px; color: #64748b; margin-top: -10px;">Haga clic sobre cualquier usuario de la tabla para cargarlo en el panel de control izquierdo para modificar sus permisos o contraseña.</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario (ID)</th>
+                            <th>Nombre Completo</th>
+                            <th>Rol</th>
+                            <th>Ubicación Asignada</th>
+                            <th>Matriz de Permisos Activos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in usuarios %}
+                        <tr class="user-row" onclick="cargarUsuario(this, '{{ u[0] }}', '{{ u[1] }}', '{{ u[2] }}', '{{ u[3] }}', '{{ u[4] }}', '{{ u[5] }}')">
+                            <td style="font-family: monospace; font-weight: bold; color: #1a237e;">{{ u[0] }}</td>
+                            <td><strong>{{ u[3] }}</strong></td>
+                            <td><span class="badge-rol rol-{{ u[2] }}">{{ u[2] }}</span></td>
+                            <td>{{ u[4] }}</td>
+                            <td style="color: #4a5568; font-size: 12px; font-family: monospace;">{{ u[5] }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 20px;">No hay cuentas creadas en el sistema actualmente.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        function setAccion(val) { document.getElementById('inputAccion').value = val; }
+        
+        // AUTOMATIZACIÓN INTELIGENTE DE LOGINS INSTITUCIONALES
+        function generarNombreUsuarioAutomatico() {
+            var inputAccion = document.getElementById('inputAccion').value;
+            // Solo autogeneramos el nombre si estamos CREANDO un usuario nuevo
+            if (inputAccion !== 'crear') return;
+
+            var nombreCompleto = document.getElementById('txtNombreCompleto').value.trim();
+            if (!nombreCompleto) {
+                document.getElementById('txtUsername').value = "";
+                return;
+            }
+
+            // Separamos las palabras por espacios limpios
+            var partes = nombreCompleto.split(/\s+/);
+            
+            if (partes.length >= 1) {
+                var primerNombre = partes[0];
+                var primeraLetra = primerNombre.charAt(0).toLowerCase();
+                var primerApellido = "";
+                
+                // Si el usuario ingresó apellido, lo tomamos. Si no, dejamos solo la primera letra.
+                if (partes.length >= 2) {
+                    primerApellido = partes[1].toLowerCase();
+                }
+                
+                // Limpiamos acentos y caracteres raros para asegurar compatibilidad de base de datos
+                var usuarioSugerido = (primeraLetra + primerApellido)
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-z0-9]/g, ""); // Solo caracteres alfanuméricos
+                
+                document.getElementById('txtUsername').value = usuarioSugerido;
+            }
+        }
+
+        function cargarUsuario(row, username, password, rol, nombre_completo, sala, permisos_str) {
+            document.querySelectorAll('.user-row').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            
+            // Pasamos los valores al formulario izquierdo
+            document.getElementById('txtUsername').value = username;
+            document.getElementById('txtUsername').readOnly = true; // Bloqueamos el ID al editar
+            document.getElementById('txtNombreCompleto').value = nombre_completo;
+            document.getElementById('txtPassword').value = password;
+            document.getElementById('cbRol').value = rol;
+            document.getElementById('cbSalaAsignada').value = sala;
+            
+            // Desmarcamos todos los checkboxes antes de pintar los del usuario seleccionado
+            document.querySelectorAll('.chk-permiso').forEach(chk => chk.checked = false);
+            
+            // Activamos los checkboxes correspondientes leyendo la cadena separada por comas
+            var permisosArray = permisos_str.split(',');
+            permisosArray.forEach(p => {
+                var chk = document.querySelector('.chk-permiso[value="' + p.trim() + '"]');
+                if (chk) chk.checked = true;
+            });
+            
+            setAccion('modificar');
+            document.getElementById('lblHint').innerHTML = "🔒 Nombre de usuario fijo (No editable al modificar)";
+        }
+
+        function limpiarFormulario() {
+            document.querySelectorAll('.user-row').forEach(r => r.classList.remove('selected'));
+            document.getElementById('formUsuarios').reset();
+            document.getElementById('txtUsername').readOnly = false;
+            document.getElementById('lblHint').innerHTML = "💡 Autogenerado: primera letra + apellido";
+            setAccion('crear');
+            
+            // Restablecemos el checkbox por defecto
+            document.querySelectorAll('.chk-permiso').forEach(chk => chk.checked = false);
+            document.querySelector('.chk-permiso[value="Tickets"]').checked = true;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soporte Escolar TI - Control de Inventario Ampliado</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #283593; --success: #16a085; --light: #f5f7fa; --danger: #c0392b; --warning: #f39c12; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        .menu-items { display: flex; gap: 12px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 16px; font-weight: 600; padding: 10px 20px; border-radius: 6px; text-decoration: none; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: var(--secondary); border: 1px solid rgba(255,255,255,0.2); }
+        .container { max-width: 1350px; margin: 30px auto; padding: 0 25px; display: flex; gap: 25px; }
+        .left-panel { width: 340px; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); height: fit-content; border: 1px solid #e2e8f0; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 25px; }
+        h3 { margin-top: 0; color: var(--primary); font-size: 18px; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-weight: 700; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #4a5568; }
+        input, select { width: 100%; box-sizing: border-box; padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        button { width: 100%; padding: 11px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; border: none; }
+        button.btn-primary { background: var(--primary); color: white; }
+        button.btn-primary:hover { background: var(--secondary); }
+        button.btn-danger { background: #e74c3c; color: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        tr.item-row { cursor: pointer; }
+        tr.item-row:hover { background: #f1f5f9; }
+        tr.selected { background-color: #e3f2fd !important; }
+        .badge-accion { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .accion-REGISTRO { background: #d1fae5; color: #065f46; }
+        .accion-MODIFICACION { background: #fef3c7; color: #92400e; }
+        .accion-ELIMINACION { background: #fee2e2; color: #991b1b; }
+        .table-container { max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .filter-alert { background: #e0f2fe; color: #0369a1; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-bottom: 10px; border: 1px solid #bae6fd; display: none; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <!-- PESTAÑA EXCLUSIVA DE MANTENIMIENTO DEL SISTEMA -->
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+
+    </nav>
+    <div class="container">
+        <!-- Formulario Lateral de Asignación de Equipos -->
+        <form class="left-panel" id="formInventario" action="/mantenedor_inventario" method="POST">
+            <input type="hidden" name="accion" id="inputAccion" value="crear">
+            <input type="hidden" name="equipo_id" id="txtEquipoId" value="">
+            <h3>Asignación de Equipos</h3>
+            
+            <div class="form-group">
+                <label>Sala / Ubicación actual o destino:</label>
+                <select name="sala" id="cbSala" required onchange="filtrarEquiposPorSala()">
+                    <option value="" disabled selected>-- Seleccione Sala --</option>
+                    {% for sala in salas_select %}
+                        <option value="{{ sala }}">{{ sala }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Seleccione Tipo de Dispositivo:</label>
+                <select name="nombre_equipo" id="txtNombreEquipo" required>
+                    <option value="" disabled selected>-- Elija Tipo --</option>
+                    <option value="Proyector Epson Techo">📽️ Proyector Epson Techo</option>
+                    <option value="Data Show Sony Portátil">📽️ Data Show Sony Portátil</option>
+                    <option value="PC Alumno Torre/Escritorio">💻 PC Alumno Torre/Escritorio</option>
+                    <option value="PC Mesón de Atención Alumno">💻 PC Mesón de Atención Alumno</option>
+                    <option value="Notebook Docente Mineduc">💻 Notebook Docente Mineduc</option>
+                    <option value="Impresora Brother Láser">🖨️ Impresora Brother Láser</option>
+                    <option value="Fotocopiadora Ricoh Central">🖨️ Fotocopiadora Ricoh Central</option>
+                    <option value="Sistema de Audio / Parlantes">🔊 Sistema de Audio / Parlantes</option>
+                    <option value="Router Wi-Fi Corporativo">🌐 Router Wi-Fi Corporativo</option>
+                    <option value="Otros (Cables, Conectores, Adaptadores)">🔌 Otros (Cables, Conectores, Adaptadores)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Marca:</label>
+                <input type="text" name="marca" id="txtMarca" required placeholder="Ej: Epson, HP, Lenovo, Brother">
+            </div>
+
+            <div class="form-group">
+                <label>Modelo Técnico:</label>
+                <input type="text" name="modelo" id="txtModelo" required placeholder="Ej: PowerLite X41, ProDesk 400">
+            </div>
+
+            <div class="form-group">
+                <label>Número de Serie (S/N):</label>
+                <input type="text" name="serie" id="txtSerie" required placeholder="Ej: SN-998877X">
+            </div>
+
+            <div class="form-group">
+                <label>Código de Inventario Interno:</label>
+                <input type="text" name="codigo_inventario" id="txtCodigoInventario" required placeholder="Ej: PRY-LAB-01" autocomplete="off">
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" style="background:#7f8c8d; color:white; margin-bottom: 5px;" onclick="limpiarFormulario()">🧹 Limpiar / Nuevo</button>
+                <button type="submit" class="btn-primary" onclick="setAccion('crear')">➕ Asignar a Sala</button>
+                <button type="submit" class="btn-primary" style="background:#34495e;" onclick="setAccion('modificar')">✏️ Reubicar / Modificar</button>
+                <button type="submit" class="btn-danger" onclick="setAccion('eliminar')">❌ Dar de Baja</button>
+            </div>
+        </form>
+
+        <div class="right-panel">
+            <!-- Grilla Principal del Catálogo TI -->
+            <div>
+                <h3>📦 Catálogo General de Equipos Asignados</h3>
+                <div class="filter-alert" id="alertaFiltro">💡 Mostrando solo los equipos asignados a la sala seleccionada. Haga clic en uno para cargarlo en el formulario.</div>
+                <div class="table-container">
+                    <table id="tablaInventario">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Sala / Ubicación</th>
+                                <th>Tipo Dispositivo</th>
+                                <th>Marca</th>
+                                <th>Modelo</th>
+                                <th>Nº Serie</th>
+                                <th>Código Barras</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+						<tbody>
+							{% for i in inventario %}
+							<!-- Mapeamos cada columna por su posición en la tupla: id(0), sala(1), equipo(2), codigo(3), marca(4), modelo(5), serie(6) -->
+							<tr class="item-row" data-sala="{{ i[1] }}" onclick="cargarEquipo(this, '{{ i[0] }}', '{{ i[1] }}', '{{ i[2] }}', '{{ i[3] }}', '{{ i[4] }}', '{{ i[5] }}', '{{ i[6] }}')">
+								<td>#{{ i[0] }}</td>
+								<td class="col-sala"><strong>{{ i[1] }}</strong></td>
+								<td>{{ i[2] }}</td>
+								<td>{{ i[4] }}</td>
+								<td>{{ i[5] }}</td>
+								<td style="color:#555; font-family:monospace;">{{ i[6] }}</td>
+								<td style="font-family: monospace; font-weight: bold; color: #1a237e;">{{ i[3] }}</td>
+							</tr>
+							{% else %}
+							<tr>
+								<td colspan="7" style="text-align: center; color: #7f8c8d; padding: 15px;">No hay equipamiento catalogado actualmente.</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+
+
+                    </table>
+                </div>
+            </div>
+
+            <div>
+                <h3>📜 Historial y Bitácora de Movimientos de Inventario</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Código</th><th>Origen</th><th>Destino</th><th>Operación</th><th>Fecha Movimiento</th><th>Operario Responsable</th></tr>
+                        </thead>
+
+			<tbody>
+				{% for h in historial %}
+				<!-- h(0)=id, h(1)=codigo, h(2)=origen, h(3)=destino, h(4)=accion, h(5)=fecha, h(6)=operario -->
+				<tr>
+					<td style="font-family: monospace; font-weight: bold;">{{ h[1] }}</td>
+					<td class="text-muted">{{ h[2] if h[2] else 'N/A' }}</td>
+					<td><strong>{{ h[3] if h[3] else 'Baja' }}</strong></td>
+					<td><span class="badge-accion accion-{{ h[4] }}">{{ h[4] }}</span></td>
+					<td style="font-size: 11px; color: #555;">{{ h[5][:16] }}</td>
+					<td>{{ h[6] }}</td>
+				</tr>
+				{% else %}
+				<tr>
+					<td colspan="6" style="text-align: center; color: #7f8c8d; padding: 15px;">No se registran movimientos ni transferencias históricas.</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setAccion(val) { document.getElementById('inputAccion').value = val; }
+        
+        function cargarEquipo(row, id, sala, nombre, codigo, marca, modelo_eq, serie) {
+            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            
+            document.getElementById('txtEquipoId').value = id;
+            document.getElementById('cbSala').value = sala;
+            document.getElementById('txtNombreEquipo').value = nombre;
+            document.getElementById('txtCodigoInventario').value = codigo;
+            document.getElementById('txtMarca').value = marca;
+            document.getElementById('txtModelo').value = modelo_eq;
+            document.getElementById('txtSerie').value = serie;
+        }
+
+        function filtrarEquiposPorSala() {
+            var salaSeleccionada = document.getElementById('cbSala').value;
+            var filas = document.querySelectorAll('#tablaInventario tbody tr');
+            var alerta = document.getElementById('alertaFiltro');
+            
+            if (!salaSeleccionada) {
+                alerta.style.display = 'none';
+                return;
+            }
+            
+            alerta.style.display = 'block';
+            filas.forEach(function(fila) {
+                var salaFila = fila.getAttribute('data-sala');
+                if (salaFila === salaSeleccionada) {
+                    fila.style.display = '';
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+        }
+
+        function limpiarFormulario() {
+            document.querySelectorAll('.item-row').forEach(r => {
+                r.classList.remove('selected');
+                r.style.display = '';
+            });
+            document.getElementById('txtEquipoId').value = "";
+            document.getElementById('txtNombreEquipo').selectedIndex = 0;
+            document.getElementById('txtCodigoInventario').value = "";
+            document.getElementById('txtMarca').value = "";
+            document.getElementById('txtModelo').value = "";
+            document.getElementById('txtSerie').value = "";
+            document.getElementById('cbSala').selectedIndex = 0;
+            document.getElementById('alertaFiltro').style.display = 'none';
+            setAccion('crear');
+        }
+    </script>
+</body>
+</html>

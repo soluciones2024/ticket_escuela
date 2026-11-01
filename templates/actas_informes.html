@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Soporte Escolar TI - Fichas y Actas Oficiales</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #16a085; --danger: #c0392b; --success: #27ae60; --light: #f5f7fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        .menu-items { display: flex; gap: 12px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 16px; font-weight: 600; padding: 10px 20px; border-radius: 6px; text-decoration: none; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: #283593; border: 1px solid rgba(255,255,255,0.2); }
+        
+        .container { max-width: 1350px; margin: 30px auto; padding: 0 25px; display: flex; gap: 25px; }
+        .left-panel { width: 320px; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; height: fit-content; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        
+        /* Fichas de Auditoría */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; text-align: center; }
+        .stat-box { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; }
+        .stat-box div { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .stat-box span { font-size: 11px; text-transform: uppercase; color: #64748b; }
+        
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #4a5568; margin-top: 10px; }
+        select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
+        button { width: 100%; padding: 11px; font-size: 14px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; margin-top: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        
+        .firma-section { display: none; margin-top: 60px; justify-content: space-around; text-align: center; }
+        .linea-firma { width: 220px; border-top: 1px solid #333; margin-bottom: 5px; padding-top: 5px; }
+
+        /* REGLAS DE IMPRESIÓN LIMPIAS (ACTA OFICIAL DE LA ESCUELA) */
+        @media print {
+            nav, .left-panel, .stats-grid, h3, label, select, button, hr { display: none !important; }
+            body { background: white; padding: 0; }
+            .container, .right-panel { box-shadow: none; padding: 0; border: none; width: 100%; margin: 0; }
+            th { background: #f8fafc !important; color: #111 !important; border-bottom: 2px solid #111 !important; }
+            td { padding: 10px 5px; border-bottom: 1px solid #ccc; }
+            .firma-section { display: flex !important; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <!-- PESTAÑA EXCLUSIVA DE MANTENIMIENTO DEL SISTEMA -->
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+
+
+    </nav>
+    <div class="container">
+        <!-- Panel de Filtros Laterales -->
+        <form class="left-panel" action="/actas" method="GET">
+            <h3>Centro de Reportes</h3>
+            
+            <label>Filtrar por Sala:</label>
+            <select name="sala_filtro">
+                {% for sala in salas_select %}
+                    <option value="{{ sala }}" {% if sala_seleccionada == sala %}selected{% endif %}>{{ sala }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Seleccione Tipo de Informe:</label>
+            <select name="tipo">
+                <option value="Ficha General de Inventario" {% if tipo_seleccionado == 'Ficha General de Inventario' %}selected{% endif %}>📦 Ficha General de Inventario</option>
+                <option value="Incidentes Pendientes (Mesa TI)" {% if tipo_seleccionado == 'Incidentes Pendientes (Mesa TI)' %}selected{% endif %}>⚠️ Incidentes Pendientes (Mesa TI)</option>
+                <option value="Historial de Reparaciones (Bitácora)" {% if tipo_seleccionado == 'Historial de Reparaciones (Bitácora)' %}selected{% endif %}>🔧 Historial de Reparaciones (Bitácora)</option>
+                <option value="Equipos Dados de Baja" {% if tipo_seleccionado == 'Equipos Dados de Baja' %}selected{% endif %}>🚨 Equipos Dados de Baja</option>
+            </select>
+            
+            <button type="submit" style="background:var(--primary); color:white;">📊 Cargar Informe</button>
+            <button type="button" style="background:var(--secondary); color:white;" onclick="window.print()">📥 Exportar Documento / Imprimir</button>
+        </form>
+        <!-- Matriz Gerencial y Gráficos -->
+        <div class="right-panel">
+            <div style="margin-bottom: 15px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                <h2 style="margin:0; color:var(--primary); font-size:24px;">Establecimiento Educacional - Acta Oficial TI</h2>
+                <span style="font-size:13px; color:#64748b;">Informe: <strong>{{ tipo_seleccionado }}</strong> | Ubicación: <strong>{{ sala_seleccionada }}</strong></span>
+            </div>
+            
+            <!-- Contadores de Auditoría Locales -->
+            <div class="stats-grid">
+                <div class="stat-box"><div>{{ metricas[0][0] if metricas else 0 }}</div><span>Historial Casos</span></div>
+                <div class="stat-box" style="border-bottom: 3px solid var(--success);"><div>{{ metricas[0][1] if metricas[0][1] else 0 }}</div><span>Equipos Operativos</span></div>
+                <div class="stat-box" style="border-bottom: 3px solid var(--danger);"><div>{{ metricas[0][2] if metricas[0][2] else 0 }}</div><span>Equipos Dados de Baja</span></div>
+            </div>
+
+            <!-- Gráficos Offline SVG Nativos -->
+            <div style="display: flex; gap: 20px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 15px; align-items: center; justify-content: space-around;">
+                <div style="text-align: center;">
+                    <strong style="font-size:13px;">Proporción Operacional Global:</strong><br><br>
+                    <svg width="120" height="120" viewBox="0 0 42 42">
+                        <circle cx="21" cy="21" r="15.915" fill="#fff"></circle>
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#e2e8f0" stroke-width="5"></circle>
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#27ae60" stroke-width="5" stroke-dasharray="75 25" stroke-dashoffset="25"></circle>
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#c0392b" stroke-width="5" stroke-dasharray="25 75" stroke-dashoffset="50"></circle>
+                    </svg>
+                    <div style="font-size: 10px; margin-top: 5px;"><span style="color:#27ae60;">● OK (75%)</span> | <span style="color:#c0392b;">● Baja (25%)</span></div>
+                </div>
+                <div style="flex-grow: 1; max-width: 350px;">
+                    <strong style="font-size:13px;">Distribución de Fallas Comunes:</strong><br><br>
+                    <div style="font-size: 11px; margin-bottom: 3px;">Infraestructura de Aulas / Proyectores (60%)</div>
+                    <div style="background: #e2e8f0; border-radius: 4px; height: 10px; width: 100%;"><div style="background: #1a237e; width: 60%; height: 100%; border-radius: 4px;"></div></div>
+                    <div style="font-size: 11px; margin-bottom: 3px; margin-top: 6px;">Equipos de Laboratorio (40%)</div>
+                    <div style="background: #e2e8f0; border-radius: 4px; height: 10px; width: 100%;"><div style="background: #16a085; width: 40%; height: 100%; border-radius: 4px;"></div></div>
+                </div>
+            </div>
+
+            <!-- Tabla de Datos Inteligente Adaptable al Informe Seleccionado -->
+            <table>
+                <thead>
+                    <tr>
+                        {% if tipo_seleccionado == "Ficha General de Inventario" or tipo_seleccionado == "Equipos Dados de Baja" %}
+                            <th style="width:40px; text-align:center;">Folio</th>
+                            <th>Ubicación / Sala</th>
+                            <th>Tipo Dispositivo</th>
+                            <th>Código Barras</th>
+                            <th>Marca</th>
+                            <th>Modelo</th>
+                            <th>Número de Serie</th>
+                        {% elif tipo_seleccionado == "Incidentes Pendientes (Mesa TI)" %}
+                            <th style="width:40px; text-align:center;">Folio</th>
+                            <th>Sala Afectada</th>
+                            <th>Falla Reportada</th>
+                            <th>Código Inventario</th>
+                            <th>Prioridad Semáforo</th>
+                            <th>Estado Actual</th>
+                            <th>Fecha Registro</th>
+                        {% elif tipo_seleccionado == "Historial de Reparaciones (Bitácora)" %}
+                            <th style="width:40px; text-align:center;">ID</th>
+                            <th>Sala Intervención</th>
+                            <th>Dispositivo Mantenido</th>
+                            <th>Código Placa</th>
+                            <th>Técnico Responsable</th>
+                            <th>Componente Cambiado</th>
+                            <th>Fecha Procedimiento</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inf in informes %}
+                    <tr>
+                        <td style="text-align:center;"><strong>#{{ inf[0] }}</strong></td>
+                        <td>{{ inf[1] }}</td>
+                        <td>{{ inf[2] }}</td>
+                        <td style="font-family:monospace; font-weight:bold;">{{ inf[3] if inf[3] else 'Sin Registrar' }}</td>
+                        <td>{{ inf[4] }}</td>
+                        <td>{{ inf[5] }}</td>
+                        <td style="color:#555;">{{ inf[6] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #64748b; padding: 25px;">No se registran datos ni movimientos bajo este parámetro analítico.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Secciones de Firma Visibles Exclusivamente en Impresión / PDF -->
+            <div class="firma-section">
+                <div>
+                    <div class="linea-firma"></div>
+                    <strong>Firma Encargado Soporte TI</strong><br>
+                    <span>Establecimiento Educativo</span>
+                </div>
+                <div>
+                    <div class="linea-firma"></div>
+                    <strong>Firma Dirección / Inspectoría</strong><br>
+                    <span>Validación de Inventario Escolar</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

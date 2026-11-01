@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mantenimiento TI - Respaldos y Migración Masiva</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #283593; --success: #16a085; --light: #f5f7fa; --danger: #c0392b; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        .menu-items { display: flex; gap: 12px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 15px; font-weight: 600; padding: 10px 14px; border-radius: 6px; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: var(--secondary); border: 1px solid rgba(255,255,255,0.2); }
+        
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .card-panel { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        .card-full { grid-column: 1 / -1; }
+        
+        h3 { margin-top: 0; color: var(--primary); font-size: 18px; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; font-weight: 700; }
+        p { font-size: 13px; color: #64748b; line-height: 1.5; margin-top: -5px; }
+        textarea { width: 100%; height: 120px; box-sizing: border-box; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fafafa; resize: vertical; }
+        
+        button { width: 100%; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; border: none; color: white; margin-top: 10px; }
+        .btn-backup { background: #34495e; }
+        .btn-load { background: var(--primary); }
+        
+        .alert-flash { background: #d1fae5; color: #065f46; padding: 15px; border-radius: 6px; font-weight: bold; font-size: 14px; margin-bottom: 20px; max-width: 1350px; margin: 20px auto; border: 1px solid #a7f3d0; }
+        .csv-example { font-family: monospace; font-size: 11px; background: #fff7ed; padding: 8px; border-radius: 4px; border: 1px solid #ffedd5; color: #c2410c; margin-bottom: 10px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+        <div class="menu-items">
+            <a href="/dashboard">🎫 Tickets</a>
+            <a href="/bitacora">🔧 Control Técnico TI</a>
+            <a href="/carritos">📱 Carritos</a>
+            <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a>
+            <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a>
+            <a href="/mantenedor_salas">🏫 Dependencias Escolares</a>
+            <a href="/actas">📊 Actas</a>
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <a href="/administracion_sistema" class="active">⚙️ Panel Sistema</a>
+        </div>
+    </nav>
+
+    <!-- NOTIFICACIONES DE ACCIÓN -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert-flash">🔔 {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="container">
+
+        <!-- Bloque 1: Generador y Cargador de Copias de Seguridad (Backup & Restore) -->
+        <div class="card-panel card-full" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="border-right: 1px solid #edf2f7; padding-right: 20px;">
+                <h3>💾 Resguardo Integral (Backup en Caliente)</h3>
+                <p>Al presionar el botón de respaldo, el sistema generará de forma automatizada un clon idéntico del archivo de la base de datos actual (`soporte_escuela.db`) con la fecha de la captura.</p>
+                <form action="/administracion_sistema" method="POST">
+                    <input type="hidden" name="formulario_accion" value="respaldar_bd">
+                    <button type="submit" class="btn-backup" style="background:#34495e;">📦 Generar Copia de Seguridad Inmediata</button>
+                </form>
+            </div>
+            <div style="padding-left: 10px;">
+                <h3>📥 Restaurar Copia de Seguridad (Carga de Resguardo)</h3>
+                <p>Seleccione un archivo `.db` guardado anteriormente para sobrescribir los datos activos del establecimiento y recuperar la traza de folios completa.</p>
+                <form action="/administracion_sistema" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="formulario_accion" value="cargar_respaldo_bd">
+                    <input type="file" name="archivo_db" accept=".db" required style="padding: 6px; border: 1px dashed #cbd5e1; background: #fafafa; margin-bottom: 5px;">
+                    <button type="submit" class="btn-backup" style="background:var(--success);">⚡ Restaurar Base de Datos Activa</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bloque 2: Carga Masiva de Equipamiento de Hardware -->
+        <div class="card-panel">
+            <h3>🚀 Migración Masiva de Equipos y Componentes</h3>
+            <p>Pegue el listado de hardware separado por comas utilizando el formato exacto de la base de datos escolar. El motor omitirá de forma nativa los registros duplicados.</p>
+            <div class="csv-example">
+                <strong>Formato Requerido (Sin espacios externos):</strong><br>
+                sala,tipo_dispositivo,codigo_inventario,marca,modelo,serie<br><br>
+                <strong>Ejemplo Listo para Copiar:</strong><br>
+                Laboratorio Computación,PC Alumno Torre/Escritorio,PC-LAB-A03,HP,ProDesk 400,SN-998803<br>
+                Laboratorio Computación,Proyector Epson Techo,PRY-LAB-02,Epson,PowerLite,SN-776602<br>
+                Biblioteca,Notebook Docente Mineduc,NOT-BIB-01,Lenovo,ThinkPad,SN-554401
+            </div>
+            <form action="/administracion_sistema" method="POST">
+                <input type="hidden" name="formulario_accion" value="carga_masiva_equipos">
+                <textarea name="csv_equipos" placeholder="sala,tipo_dispositivo,codigo_inventario,marca,modelo,serie&#10;ejemplo_sala,ejemplo_tipo,ejemplo_codigo,ejemplo_marca..."></textarea>
+                <button type="submit" class="btn-load">⚡ Inyectar Listado de Equipos</button>
+            </form>
+        </div>
+
+        <!-- Bloque 3: Carga Masiva de Personal Docente y Cuentas -->
+        <div class="card-panel">
+            <h3>👥 Migración Masiva de Cuentas Docentes</h3>
+            <p>Pegue la nómina de profesores y técnicos administrativos para dar de alta sus credenciales e inyectar de forma simultánea su matriz relacional de accesos.</p>
+            <div class="csv-example">
+                <strong>Formato Requerido (Sin espacios externos):</strong><br>
+                usuario,contraseña,rol,nombre_completo,sala_fija,permisos<br><br>
+                <strong>Ejemplo Listo para Copiar:</strong><br>
+                pmorales,profe123,Profesor,Paola Morales,Sala Primero Básico,Tickets<br>
+                jcastro,tec123,Informático,Juan Castro,Oficina TI,Tickets,Bitacora,Carritos,Usuarios,Inventario,Salas,Actas<br>
+                amendoza,Profesor,Andrés Mendoza,Biblioteca,Tickets
+            </div>
+            <form action="/administracion_sistema" method="POST">
+                <input type="hidden" name="formulario_accion" value="carga_masiva_usuarios">
+                <textarea name="csv_usuarios" placeholder="usuario,contraseña,rol,nombre_completo,sala_fija,permisos&#10;ejemplo_usuario,ejemplo_clave,ejemplo_rol..."></textarea>
+                <button type="submit" class="btn-load">⚡ Inyectar Listado de Cuentas</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

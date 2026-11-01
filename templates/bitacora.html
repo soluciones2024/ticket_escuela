@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mesa de Control - Consola Técnica TI</title>
+    <style>
+        :root { --primary: #1a237e; --secondary: #283593; --success: #16a085; --danger: #c0392b; --warning: #f39c12; --light: #f5f7fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; margin: 0; padding: 0; color: #333; }
+        
+        nav { background: var(--primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        nav a.brand { color: white; text-decoration: none; font-size: 24px; font-weight: 800; }
+        .menu-items { display: flex; gap: 12px; }
+        .menu-items a { color: #c5cae9; text-decoration: none; font-size: 15px; font-weight: 600; padding: 10px 14px; border-radius: 6px; text-decoration: none; }
+        .menu-items a:hover { color: white; background: rgba(255,255,255,0.1); }
+        .menu-items a.active { color: white; background: #283593; border: 1px solid rgba(255,255,255,0.2); }
+        
+        .container { max-width: 1400px; margin: 25px auto; padding: 0 25px; display: flex; gap: 25px; }
+        .side-container { width: 360px; display: flex; flex-direction: column; gap: 20px; }
+        .left-panel { background: white; border-radius: 8px; padding: 22px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        .right-panel { flex-grow: 1; background: white; border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 25px; }
+        
+        h3 { margin-top: 0; color: var(--primary); font-size: 16px; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; font-weight: 700; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #4a5568; }
+        select, textarea, input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #333; }
+        textarea { height: 65px; resize: none; }
+        button { width: 100%; padding: 10px; border: none; color: white; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        
+        .prio-badge { padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+        .prio-Crítica { background: #fee2e2; color: #991b1b; }
+        .prio-Alta { background: #fef3c7; color: #92400e; }
+        .prio-Media { background: #e0f2fe; color: #0369a1; }
+        .prio-Baja { background: #f1f5f9; color: #475569; }
+        
+        .status-tag { font-weight: bold; font-size: 12px; }
+        .status-Abierto { color: var(--danger); }
+        .status-Revision { color: var(--warning); }
+        .status-Reparado { color: var(--success); }
+        
+        .table-container { max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .search-box { display: flex; gap: 8px; margin-bottom: 5px; }
+        .search-box input { flex-grow: 1; }
+        .search-box button { width: auto; background: var(--primary); padding: 0 15px; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a class="brand" href="#">🏫 Control TI Colegio</a>
+
+        <div class="menu-items">
+            {% if 'Tickets' in session.get('permisos', []) %} <a href="/dashboard">🎫 Tickets</a> {% endif %}
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/bitacora">🔧 Control Técnico TI</a> {% endif %}
+            {% if 'Carritos' in session.get('permisos', []) %} <a href="/carritos">📱 Carritos</a> {% endif %}
+            {% if 'Usuarios' in session.get('permisos', []) %} <a href="/mantenedor_usuarios">👥 Cuentas Docentes</a> {% endif %}
+            {% if 'Inventario' in session.get('permisos', []) %} <a href="/mantenedor_inventario">🏢 Asignar Equipamiento</a> {% endif %}
+            {% if 'Salas' in session.get('permisos', []) %} <a href="/mantenedor_salas">🏫 Dependencias Escolares</a> {% endif %}
+            {% if 'Actas' in session.get('permisos', []) %} <a href="/actas">📊 Actas</a> {% endif %}
+            <a href="/historial_soluciones">📜 Historial Soluciones</a>
+            <!-- PESTAÑA EXCLUSIVA DE MANTENIMIENTO DEL SISTEMA -->
+            {% if 'Bitacora' in session.get('permisos', []) %} <a href="/administracion_sistema">⚙️ Panel Sistema</a> {% endif %}
+        </div>
+
+    </nav>
+
+    <!-- ALERTAS FLASH DE CONTROL -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div style="background: #d1fae5; color: #065f46; padding: 12px 40px; font-weight: bold; font-size: 14px;">🔔 {{ message }}</div>
+             Stein
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="container">
+        <div class="side-container">
+            <!-- Formulario 1: Solución y Cierre Técnico con Fecha y Tipo de Solución -->
+            <form class="left-panel" action="/bitacora" method="POST">
+                <input type="hidden" name="formulario_tipo" value="reparacion">
+                <h3>🛠️ 1. Resolver Incidente (Cierre)</h3>
+                <div class="form-group">
+                    <label>Seleccionar Falla Activa:</label>
+                    <select name="ticket_id" required>
+                        {% for tk in tickets_activos %}
+                        <option value="{{ tk[0] }}">#{{ tk[0] }} - {{ tk[1] }} [{{ tk[2] }}]</option>
+                        {% else %}
+                        <option disabled>No hay requerimientos pendientes</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Solución Aplicada:</label>
+                    <select name="tipo_solucion" required>
+                        <option value="Reparación en Sitio">Reparación en Sitio</option>
+                        <option value="Cambio de Componente / Insumo">Cambio de Componente / Insumo</option>
+                        <option value="Mantención de Software / Formateo">Mantención de Software / Formateo</option>
+                        <option value="Envío a Garantía Externa">Envío a Garantía Externa</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Componente Cambiado / Reparado:</label>
+                    <input type="text" name="componente" required placeholder="Ej: Cable HDMI 5M, Memoria RAM Kingston">
+                </div>
+                <div class="form-group">
+                    <label>Procedimiento Técnico Aplicado:</label>
+                    <textarea name="detalles" required placeholder="Describa de forma precisa el trabajo técnico realizado..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Cerrar Con Estado Técnico:</label>
+                    <select name="nuevo_estado">
+                        <option value="Reparado">✅ Reparado / Operativo</option>
+                        <option value="De Baja">🚨 Inoperante / Dar de Baja</option>
+                    </select>
+                </div>
+                <button type="submit" style="background: var(--success);">💾 Cargar Cierre Técnico</button>
+            </form>
+
+            <!-- Formulario 2: Calendario Planificación para Solución -->
+            <form class="left-panel" action="/bitacora" method="POST">
+                <input type="hidden" name="formulario_tipo" value="planificacion">
+                <h3>📅 2. Planificar Visita Técnica</h3>
+                <div class="form-group">
+                    <label>Asociar Folio:</label>
+                    <select name="ticket_id" required>
+                        {% for tk in tickets_activos %}
+                        <option value="{{ tk[0] }}">#{{ tk[0] }} - {{ tk[1] }} ({{ tk[2] }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Intervención Planificada:</label>
+                    <input type="date" name="fecha_planificada" required>
+                </div>
+                <button type="submit" style="background: var(--primary);">🗓️ Agendar en Cronograma</button>
+            </form>
+        </div>
+
+        <!-- Panel Derecho: Bandejas de Revisión, Calendario y Hoja de Vida Atómica -->
+        <div class="right-panel">
+            
+            <!-- 1. BUSCADOR DE HOJA DE VIDA / BITÁCORA ATÓMICA DE CADA EQUIPO -->
+            <div>
+                <h3 style="border-bottom: 2px solid var(--primary); padding-bottom: 6px;">📋 Consultar Hoja de Vida de Equipo (Historial Técnico)</h3>
+                <form action="/bitacora" method="GET" class="search-box">
+                    <input type="text" name="buscar_codigo_hoja_vida" value="{{ codigo_buscado }}" placeholder="Ingrese Código de Inventario exacto (Ej: PRY-LAB-01)..." required autocomplete="off">
+                    <button type="submit">🔍 Buscar Historial</button>
+                    {% if codigo_buscado %}
+                        <a href="/bitacora" style="padding: 8px 12px; background: #7f8c8d; color: white; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: bold; display: flex; align-items: center;">Limpiar</a>
+                    {% endif %}
+                </form>
+                
+                <div class="table-container" style="margin-top: 10px; max-height: 180px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID Acción</th>
+                                <th style="width: 70px;">Ticket Ref.</th>
+                                <th>Técnico Operario</th>
+                                <th>Insumo / Componente Cambiado</th>
+                                <th>Procedimiento Técnico Realizado</th>
+                                <th>Fecha Procedimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in historial %}
+                            <tr>
+                                <td>#{{ h[0] }}</td>
+                                <td><strong>#{{ h[1] }}</strong></td>
+                                <td>{{ h[2] }}</td>
+                                <td><span style="color: var(--success); font-weight: 600;">{{ h[4] }}</span></td>
+                                <td style="color: #4a5568;">{{ h[5] }}</td>
+                                <td style="font-size: 11px; color: #666;">{{ h[3][:16] }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 20px;">
+                                    {% if codigo_buscado %}
+                                        No se registran intervenciones ni mantenimientos previos para el equipo <strong>{{ codigo_buscado }}</strong>.
+                                    {% else %}
+                                        Ingrese un código de barra o inventario arriba para auditar su hoja de vida operacional completa.
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. CALENDARIO / CRONOGRAMA DE VISITAS TÉCNICAS PLANIFICADAS -->
+            <div>
+                <h3 style="border-bottom: 2px solid var(--secondary); padding-bottom: 6px;">📅 Cronograma Técnico - Planificación de Soluciones</h3>
+                <div class="table-container" style="max-height: 180px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Folio</th>
+                                <th>Dependencia / Sala</th>
+                                <th>Categoría Dispositivo</th>
+                                <th>Fecha Planificada Visita</th>
+                                <th>Criticidad Semáforo</th>
+                                <th>Estado Operacional</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in cronograma %}
+                            <tr>
+                                <td><strong>#{{ c[0] }}</strong></td>
+                                <td>{{ c[1] }}</td>
+                                <td>{{ c[2] }}</td>
+                                <td style="font-weight: bold; color: var(--primary);">🗓️ {{ c[3] }}</td>
+                                <td><span class="prio-badge prio-{{ c[4] }}">{{ c[4] }}</span></td>
+                                <td><span class="status-tag status-{{ c[5] }}">{{ c[5] }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 20px;">No se registran visitas técnicas agendadas o planificadas en el cronograma escolar.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. BANDEJA GENERAL DE INCIDENTES ACTIVOS EN LA ESCUELA -->
+            <div>
+                <h3 style="border-bottom: 2px solid var(--danger); padding-bottom: 6px;">📥 Bandeja de Fallas Críticas y Requerimientos Pendientes</h3>
+                <div class="table-container" style="max-height: 220px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Folio</th>
+                                <th>Ubicación / Pabellón</th>
+                                <th>Dispositivo</th>
+                                <th>Prioridad</th>
+                                <th>Descripción del Problema Reportado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in tickets_activos %}
+                            <tr>
+                                <td><strong>#{{ a[0] }}</strong></td>
+                                <td>{{ a[1] }}</td>
+                                <td>{{ a[2] }}</td>
+                                <td><span class="prio-badge prio-{{ a[3] }}">{{ a[3] }}</span></td>
+                                <td style="color: #4a5568; font-style: italic;">"{{ a[4] }}"</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #27ae60; font-weight: bold; padding: 25px;">
+                                    🎉 ¡Felicitaciones! No existen requerimientos de soporte pendientes en el establecimiento.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> <!-- Cierre de right-panel -->
+    </div> <!-- Cierre de container -->
+
+    <!-- MOTOR DE ESCUCHA EN TIEMPO REAL PARA EL INFORMÁTICO -->
+    <script>
+        if (!!window.EventSource) {
+            var source = new EventSource('/stream');
+            
+            source.onmessage = function(e) {
+                var ticket = JSON.parse(e.data);
+                
+                // 1. REPRODUCIR SONIDO DE ALERTA AUDITIVO
+                try {
+                    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    var oscillator = audioCtx.createOscillator();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+                    oscillator.connect(audioCtx.destination);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.3); 
+                } catch(err) { console.log("Audio bloqueado."); }
+                
+                // 2. FORZAR VENTANA EMERGENTE MANDATORIA EN PANTALLA
+                alert("🚨 [ALERTA TIEMPO REAL - MESA TI]\n\n" +
+                      "¡Se acaba de emitir un nuevo ticket en vivo!\n\n" +
+                      "• Folio: #" + ticket.folio + "\n" +
+                      "• Ubicación: " + ticket.sala + "\n" +
+                      "• Dispositivo: " + ticket.equipo + "\n" +
+                      "• Criticidad: " + ticket.prioridad + "\n\n" +
+                      "Haga clic en Aceptar para refrescar la bandeja de entrada.");
+                
+                // 3. REFRESCAR PÁGINA AUTOMÁTICAMENTE
+                window.location.reload();
+            };
+        }
+
+        // Solicitar permisos de notificación nativa al cargar la Consola
+        document.addEventListener('DOMContentLoaded', function() {
+            if (Notification && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+        });
+    </script>
+</body>
+</html>
+
